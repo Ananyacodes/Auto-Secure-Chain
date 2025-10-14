@@ -1,0 +1,27 @@
+{
+  "name": "AutoSecureChain",
+  "version": "1.0.0",
+  "description": "A project for secure blockchain interactions and vulnerability scanning.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "hardhat run scripts/deploy.ts",
+    "verify": "hardhat verify"
+  },
+  "keywords": [
+    "blockchain",
+    "security",
+    "scanner"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "hardhat": "^2.0.0",
+    "ethers": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.0.0",
+    "ts-node": "^10.0.0",
+    "eslint": "^7.0.0"
+  }
+}

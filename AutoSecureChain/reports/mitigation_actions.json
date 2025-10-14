@@ -1,0 +1,23 @@
+{
+  "generated_at": "2025-10-14T19:32:02.528764Z",
+  "actions": [
+    {
+      "file": "sample.bin",
+      "id": "disable_telnet",
+      "title": "Disable telnet",
+      "description": "Remove telnet/cleartext shells."
+    },
+    {
+      "file": "sample.bin",
+      "id": "protect_debug",
+      "title": "Protect debug interfaces",
+      "description": "Disable or gate JTAG/UART in production; require physical or cryptographic attestation."
+    },
+    {
+      "file": "sample.bin",
+      "id": "rotate_tokens",
+      "title": "Rotate hardcoded tokens",
+      "description": "Remove hardcoded provisioning tokens; issue unique per-device credentials."
+    }
+  ]
+}

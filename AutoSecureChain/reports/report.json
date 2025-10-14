@@ -1,0 +1,46 @@
+{
+  "scanned_at": "2025-10-14T19:32:02.528764Z",
+  "files": [
+    {
+      "file": "sample.bin",
+      "size_bytes": 187,
+      "sha256": "44117ae3837633821420b3d891a190ad1fa3dcbff7158a9d56432114386a4685",
+      "entropy": 4.805447551372179,
+      "strings_count": 8,
+      "matches": [],
+      "suspicious_strings": [
+        "JAGUAR_PROVISION=1",
+        "PROVISION_TOKEN=DEMO-ABCDEFG-12345",
+        "root:toor",
+        "telnetd",
+        "DEBUG_MODE=1",
+        "-----BEGIN RSA PRIVATE KEY-----",
+        "-----END RSA PRIVATE KEY-----"
+      ],
+      "signature": {
+        "sig_found": true,
+        "pubkey_found": true,
+        "valid": true,
+        "error": null
+      },
+      "severity_score": 3,
+      "recommended_mitigations": [
+        {
+          "id": "disable_telnet",
+          "title": "Disable telnet",
+          "description": "Remove telnet/cleartext shells."
+        },
+        {
+          "id": "protect_debug",
+          "title": "Protect debug interfaces",
+          "description": "Disable or gate JTAG/UART in production; require physical or cryptographic attestation."
+        },
+        {
+          "id": "rotate_tokens",
+          "title": "Rotate hardcoded tokens",
+          "description": "Remove hardcoded provisioning tokens; issue unique per-device credentials."
+        }
+      ]
+    }
+  ]
+}
