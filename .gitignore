@@ -1,0 +1,22 @@
+# Python / envs
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets, build outputs, reports
+.env
+AutoSecureChain/reports/
+*.sig
+
+# Private keys / test keys (allow public_key.pem)
+AutoSecureChain/scanner/test_private.pem
+AutoSecureChain/scanner/*_private.pem
+AutoSecureChain/scanner/*.key
+AutoSecureChain/scanner/*.p12
+!AutoSecureChain/scanner/public_key.pem
