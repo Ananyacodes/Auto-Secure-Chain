@@ -1,0 +1,7 @@
+# AutoSecureChain Metasploit notes resource script
+# Defensive use only. Adds notes to the database with scan summaries.
+
+workspace -a AutoSecureChain
+workspace AutoSecureChain
+
+notes -a -t autosecurechain.sample.bin -d "file=sample.bin sha256=44117ae3837633821420b3d891a190ad1fa3dcbff7158a9d56432114386a4685 severity=3 sig_found=True sig_valid=None suspicious_count=7 yara_matches=0" -h autosecurechain

@@ -20,3 +20,17 @@ AutoSecureChain/scanner/*_private.pem
 AutoSecureChain/scanner/*.key
 AutoSecureChain/scanner/*.p12
 !AutoSecureChain/scanner/public_key.pem
+# Firmware files (user-provided)
+firmware/
+*.bin
+*.img
+*.fw
+!AutoSecureChain/scanner/sample.bin
+
+# Docker (optional, not used currently)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Local key storage (fallback)
+.keys/

@@ -1,6 +1,12 @@
 {
-  "generated_at": "2025-10-14T19:32:02.528764Z",
+  "generated_at": "2025-10-19T07:04:33.568478Z",
   "actions": [
+    {
+      "file": "sample.bin",
+      "id": "require_fw_signing",
+      "title": "Enforce signed firmware with verified public keys",
+      "description": "Ensure each device verifies firmware signatures with a vetted public key and rejects unsigned or invalid updates."
+    },
     {
       "file": "sample.bin",
       "id": "disable_telnet",

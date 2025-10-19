@@ -1,5 +1,5 @@
 {
-  "scanned_at": "2025-10-14T19:32:02.528764Z",
+  "scanned_at": "2025-10-19T07:04:33.568478Z",
   "files": [
     {
       "file": "sample.bin",
@@ -19,12 +19,17 @@
       ],
       "signature": {
         "sig_found": true,
-        "pubkey_found": true,
-        "valid": true,
+        "pubkey_found": false,
+        "valid": null,
         "error": null
       },
       "severity_score": 3,
       "recommended_mitigations": [
+        {
+          "id": "require_fw_signing",
+          "title": "Enforce signed firmware with verified public keys",
+          "description": "Ensure each device verifies firmware signatures with a vetted public key and rejects unsigned or invalid updates."
+        },
         {
           "id": "disable_telnet",
           "title": "Disable telnet",
