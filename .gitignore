@@ -14,23 +14,12 @@ __pycache__/
 AutoSecureChain/reports/
 *.sig
 
-# Private keys / test keys (allow public_key.pem)
+# Private keys / test keys (allow public_key.pem is removed; keys are ignored)
 AutoSecureChain/scanner/test_private.pem
 AutoSecureChain/scanner/*_private.pem
 AutoSecureChain/scanner/*.key
 AutoSecureChain/scanner/*.p12
-!AutoSecureChain/scanner/public_key.pem
-# Firmware files (user-provided)
-firmware/
-*.bin
-*.img
-*.fw
-!AutoSecureChain/scanner/sample.bin
-
-# Docker (optional, not used currently)
-Dockerfile
-docker-compose.yml
-.dockerignore
-
-# Local key storage (fallback)
+# keep public_key.pem out of repo by default (do not un-ignore)
+# Local key storage
 .keys/
+
