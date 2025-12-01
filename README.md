@@ -8,6 +8,12 @@
 AutoSecureChain is a comprehensive automotive ECU firmware security analysis platform that combines static analysis, YARA rule matching, and cryptographic signature verification to detect vulnerabilities and ensure supply chain integrity.
 
 ---
+## Demo
+
+
+
+https://github.com/user-attachments/assets/d8ef7e3c-9599-4203-93e1-009d758d0c54
+
 
 ##  Features
 
