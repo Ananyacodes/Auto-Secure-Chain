@@ -11,15 +11,35 @@ import math
 import re
 import hashlib
 from pathlib import Path
+from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parent
 REPORTS = ROOT.parent / "reports"
 RULES_PATH = ROOT / "rules.yar"
 PUBKEY_PATH = ROOT / "public_key.pem"
+KEYS_DIR = Path.home() / ".autosecurechain"
+AUDIT_LOG_PATH = REPORTS / "audit.log"
 
 REPORTS.mkdir(parents=True, exist_ok=True)
 
 PRINTABLE_RE = re.compile(br'[\x20-\x7E]{4,}')  # printable ascii strings length >=4
+
+def utc_now():
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+def append_audit_event(action: str, details: dict):
+    event = {"timestamp": utc_now(), "action": action, "details": details}
+    with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(event) + "\n")
+
+def resolve_public_key_path():
+    env_key = os.getenv("AUTOS_PUBLIC_KEY")
+    if env_key:
+        return Path(env_key).expanduser(), "env"
+    managed_key = KEYS_DIR / "public_key.pem"
+    if managed_key.exists():
+        return managed_key, "managed"
+    return PUBKEY_PATH, "scanner_default"
 
 def shannon_entropy(data: bytes) -> float:
     if not data:
@@ -50,18 +70,33 @@ def hash_file(path: Path, algo="sha256"):
 def verify_external_signature(fw_path: Path):
     # Looks for fw.bin.sig alongside fw_path and a public key at PUBKEY_PATH
     sig_path = fw_path.with_suffix(fw_path.suffix + ".sig")
-    if not sig_path.exists() or not PUBKEY_PATH.exists():
-        return {"sig_found": sig_path.exists(), "pubkey_found": PUBKEY_PATH.exists(), "valid": None, "error": None}
+    pubkey_path, key_source = resolve_public_key_path()
+    if not sig_path.exists() or not pubkey_path.exists():
+        return {
+            "sig_found": sig_path.exists(),
+            "pubkey_found": pubkey_path.exists(),
+            "valid": None,
+            "error": None,
+            "public_key_path": str(pubkey_path),
+            "key_source": key_source
+        }
     try:
         from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.primitives.asymmetric import padding
         from cryptography.hazmat.backends import default_backend
     except Exception as e:
-        return {"sig_found": True, "pubkey_found": True, "valid": None, "error": "cryptography not installed: " + str(e)}
+        return {
+            "sig_found": True,
+            "pubkey_found": True,
+            "valid": None,
+            "error": "cryptography not installed: " + str(e),
+            "public_key_path": str(pubkey_path),
+            "key_source": key_source
+        }
     try:
         data = fw_path.read_bytes()
         sig = sig_path.read_bytes()
-        pubpem = PUBKEY_PATH.read_bytes()
+        pubpem = pubkey_path.read_bytes()
         pub = serialization.load_pem_public_key(pubpem, backend=default_backend())
         # Try PKCS#1 v1.5 verify with SHA256 (common simple scheme). If different scheme is used, verification will fail.
         pub.verify(
@@ -70,9 +105,23 @@ def verify_external_signature(fw_path: Path):
             padding.PKCS1v15(),
             hashes.SHA256()
         )
-        return {"sig_found": True, "pubkey_found": True, "valid": True, "error": None}
+        return {
+            "sig_found": True,
+            "pubkey_found": True,
+            "valid": True,
+            "error": None,
+            "public_key_path": str(pubkey_path),
+            "key_source": key_source
+        }
     except Exception as e:
-        return {"sig_found": True, "pubkey_found": True, "valid": False, "error": str(e)}
+        return {
+            "sig_found": True,
+            "pubkey_found": True,
+            "valid": False,
+            "error": str(e),
+            "public_key_path": str(pubkey_path),
+            "key_source": key_source
+        }
 
 def load_rules():
     try:
@@ -101,6 +150,17 @@ def scan_file(path: Path, rules):
     # signature check
     sig_info = verify_external_signature(path)
     result["signature"] = sig_info
+    append_audit_event(
+        "signature_verification",
+        {
+            "file": str(path.name),
+            "sig_found": sig_info.get("sig_found"),
+            "pubkey_found": sig_info.get("pubkey_found"),
+            "valid": sig_info.get("valid"),
+            "key_source": sig_info.get("key_source"),
+            "public_key_path": sig_info.get("public_key_path")
+        }
+    )
 
     # extract strings and find suspicious patterns
     strings = extract_strings(data)
@@ -153,20 +213,24 @@ def scan_file(path: Path, rules):
     return result
 
 def main():
+    append_audit_event("scan_started", {"scanner_root": str(ROOT)})
     rules = load_rules()
     firmware_files = sorted([p for p in ROOT.iterdir() if p.suffix.lower() in (".bin", ".img", ".fw")])
     if not firmware_files:
         print("No firmware files found in scanner/ (looking for .bin, .img, .fw).")
+        append_audit_event("scan_completed", {"files_scanned": 0})
         return
 
-    full_report = {"scanned_at": __import__("datetime").datetime.utcnow().isoformat() + "Z", "files": []}
+    full_report = {"scanned_at": utc_now(), "files": []}
     for f in firmware_files:
         try:
             r = scan_file(f, rules)
             full_report["files"].append(r)
             print(f"Scanned {f.name}  severity={r['severity_score']}")
+            append_audit_event("file_scanned", {"file": f.name, "severity_score": r["severity_score"]})
         except Exception as e:
             full_report["files"].append({"file": str(f.name), "error": str(e)})
+            append_audit_event("file_scan_error", {"file": f.name, "error": str(e)})
 
     report_path = REPORTS / "report.json"
     with open(report_path, "w", encoding="utf-8") as fh:
@@ -180,6 +244,15 @@ def main():
     with open(mitigation_path, "w", encoding="utf-8") as fh:
         json.dump(actions, fh, indent=2)
 
+    append_audit_event(
+        "scan_completed",
+        {
+            "files_scanned": len(full_report["files"]),
+            "report_path": str(report_path),
+            "mitigation_path": str(mitigation_path),
+            "audit_log_path": str(AUDIT_LOG_PATH)
+        }
+    )
     print("Reports written to:", report_path, "and", mitigation_path)
 
 if __name__ == "__main__":
