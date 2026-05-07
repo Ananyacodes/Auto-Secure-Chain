@@ -3,10 +3,11 @@ import { ethers } from "hardhat";
 
 describe("AutoSecure Contract", function () {
     let autoSecure;
+    const contractName = "AutoSecureChain";
 
     beforeEach(async function () {
         const AutoSecure = await ethers.getContractFactory("AutoSecure");
-        autoSecure = await AutoSecure.deploy();
+        autoSecure = await AutoSecure.deploy(contractName);
         await autoSecure.deployed();
     });
 
@@ -14,5 +15,7 @@ describe("AutoSecure Contract", function () {
         expect(autoSecure.address).to.properAddress;
     });
 
-    // Add more tests as needed
+    it("should return the configured name", async function () {
+        expect(await autoSecure.getName()).to.equal(contractName);
+    });
 });
