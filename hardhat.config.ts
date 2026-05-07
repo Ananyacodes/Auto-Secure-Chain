@@ -9,10 +9,13 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 
 export default {
   solidity: "0.8.0",
-  networks: {
-    rinkeby: {
-      url: process.env.INFURA_URL,
-      accounts: [process.env.PRIVATE_KEY],
-    },
-  },
+  networks:
+    process.env.INFURA_URL && process.env.PRIVATE_KEY
+      ? {
+          rinkeby: {
+            url: process.env.INFURA_URL,
+            accounts: [process.env.PRIVATE_KEY],
+          },
+        }
+      : {},
 };

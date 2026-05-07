@@ -4,7 +4,7 @@
   "description": "A project for secure blockchain interactions and vulnerability scanning.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "hardhat test",
     "deploy": "hardhat run scripts/deploy.ts",
     "verify": "hardhat verify"
   },
