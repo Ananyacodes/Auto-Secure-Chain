@@ -23,3 +23,7 @@ AutoSecureChain/scanner/*.p12
 # Local key storage
 .keys/
 
+
+# Node dependencies
+node_modules/
+frontend/node_modules/

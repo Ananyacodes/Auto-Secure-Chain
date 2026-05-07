@@ -1,0 +1,36 @@
+{
+  "scanned_at": "2026-05-07T19:00:00Z",
+  "files": [
+    {
+      "file": "sample.bin",
+      "severity_score": 3,
+      "signature": {
+        "sig_found": true,
+        "pubkey_found": true,
+        "valid": true,
+        "key_source": "managed",
+        "public_key_path": "/home/user/.autosecurechain/public_key.pem"
+      },
+      "suspicious_strings": [
+        "factory_mode_enabled",
+        "debug_uart"
+      ],
+      "matches": [
+        {
+          "rule": "debug_interface_enabled",
+          "tags": [
+            "debug"
+          ],
+          "strings": []
+        }
+      ],
+      "recommended_mitigations": [
+        {
+          "id": "protect_debug",
+          "title": "Protect debug interfaces",
+          "description": "Disable or gate JTAG/UART in production; require physical or cryptographic attestation."
+        }
+      ]
+    }
+  ]
+}

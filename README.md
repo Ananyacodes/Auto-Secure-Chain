@@ -20,6 +20,8 @@ https://github.com/user-attachments/assets/d8ef7e3c-9599-4203-93e1-009d758d0c54
 - **Static Firmware Analysis**: SHA-256 hashing, entropy analysis, suspicious string detection
 - **YARA Rule Matching**: Pattern-based detection for known vulnerabilities
 - **Cryptographic Verification**: RSA PKCS#1 v1.5 + SHA-256 signature validation
+- **Advanced On-Chain Workflow**: Multi-owner firmware finding approvals with configurable thresholds
+- **Audit Logging**: JSONL audit trail for scan lifecycle and signature verification outcomes
 - **Automated Remediation**: Severity scoring and actionable mitigation recommendations
 - **CI/CD Integration**: Machine-readable JSON reports
 
@@ -118,7 +120,21 @@ openssl dgst -sha256 -sign private_key.pem -out firmware.bin.sig firmware.bin
 
 # Place public key in secure location
 Move-Item public_key.pem "$env:USERPROFILE\.autosecurechain\"
+
+# Optional: explicitly point scanner to key path
+setx AUTOS_PUBLIC_KEY "C:\path\to\public_key.pem"
 ```
+
+Scanner public key lookup order:
+1. `AUTOS_PUBLIC_KEY` environment variable
+2. `~/.autosecurechain/public_key.pem`
+3. `AutoSecureChain/scanner/public_key.pem`
+
+### Audit Logging
+Every scan appends JSONL events to `AutoSecureChain/reports/audit.log`, including:
+- `scan_started` / `scan_completed`
+- `file_scanned` and `file_scan_error`
+- `signature_verification` with key source + key path metadata
 
 ### CI/CD Integration
 ```yaml
@@ -141,16 +157,18 @@ Move-Item public_key.pem "$env:USERPROFILE\.autosecurechain\"
 ##  Project Structure
 
 ```
-AutoSecureChain/
- scanner/
-    scanner.py              # Core analysis engine
-    rules.yar               # YARA detection rules
-    create_test_keys.py     # Test key generator
- reports/                    # Generated reports (gitignored)
- firmware/                   # User firmware files (gitignored)
- run-scanner.ps1             # Main execution script
- setup.ps1                   # Initial setup script
- requirements.txt            # Dependencies
+ AutoSecureChain/
+  scanner/
+     scanner.py              # Core analysis engine
+     rules.yar               # YARA detection rules
+     create_test_keys.py     # Test key generator
+  demo/
+     demo_scan_report.json   # Example output for demos/docs
+  reports/                    # Generated reports (gitignored)
+  firmware/                   # User firmware files (gitignored)
+  run-scanner.ps1             # Main execution script
+  setup.ps1                   # Initial setup script
+  requirements.txt            # Dependencies
  README.md
 ```
 
