@@ -1,7 +1,9 @@
 ﻿# filepath: AutoSecureChain\ui\app.py
 from pathlib import Path
 import json
-from flask import Flask, render_template, abort, send_file
+import re
+from flask import Flask, render_template, abort, send_file, jsonify
+from flask_cors import CORS
 
 APP_ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = APP_ROOT / "reports" / "report.json"
@@ -9,6 +11,7 @@ SCRIPTS_DIR = APP_ROOT / "scripts"
 OUT_RC = SCRIPTS_DIR / "autosecurechain_notes.rc"
 
 app = Flask(__name__, template_folder="templates")
+CORS(app)  # Enable CORS to allow frontend access
 
 
 def load_report():
@@ -29,7 +32,8 @@ def make_notes_lines(report):
         susp = len(f.get("suspicious_strings", []))
         yara = len(f.get("matches", []))
         data = f'file={fname} sha256={sha} severity={sev} sig_found={sf} sig_valid={sv} suspicious_count={susp} yara_matches={yara}'
-        lines.append(f'notes -a -t autosecurechain.{fname} -d "{data}" -h autosecurechain')
+        note_type = re.sub(r"[^A-Za-z0-9._-]", "_", fname) or "unknown"
+        lines.append(f'notes -a -t autosecurechain.{note_type} -d "{data.replace("\"", "\'").replace("\n", " ")}" -h autosecurechain')
     return lines
 
 
@@ -53,6 +57,13 @@ def notes_view():
     report = load_report()
     lines = make_notes_lines(report)
     return render_template("notes.html", lines=lines)
+
+
+@app.route("/api/report")
+def api_report():
+    """JSON API endpoint for frontend to fetch the latest scan report."""
+    report = load_report()
+    return jsonify(report)
 
 
 @app.route("/download-rc")

@@ -2,7 +2,8 @@ import { ethers } from "hardhat";
 
 async function main() {
     const AutoSecure = await ethers.getContractFactory("AutoSecure");
-    const autoSecure = await AutoSecure.deploy();
+    const contractName = process.env.AUTOSECURE_NAME || "AutoSecureChain";
+    const autoSecure = await AutoSecure.deploy(contractName);
 
     await autoSecure.deployed();
 

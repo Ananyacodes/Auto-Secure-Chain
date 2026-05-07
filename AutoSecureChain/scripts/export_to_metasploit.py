@@ -15,6 +15,7 @@ Requires: pymetasploit3
 from __future__ import annotations
 import argparse
 import json
+import re
 from pathlib import Path
 from pymetasploit3.msfrpc import MsfRpcClient
 
@@ -36,6 +37,10 @@ def parse_args() -> argparse.Namespace:
 
 def safe(s: str) -> str:
     return (s or "").replace('"', "'").replace("\n", " ").strip()
+
+
+def safe_token(s: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]", "_", (s or "").strip()) or "unknown"
 
 
 def main() -> int:
@@ -85,7 +90,7 @@ def main() -> int:
             "yara_matches": len(matches),
         }
         data = " ".join(f"{k}={safe(str(v))}" for k, v in summary.items())
-        note_type = f"autosecurechain.{fname}".replace(" ", "_")
+        note_type = f"autosecurechain.{safe_token(fname)}"
 
         run(f'notes -a -t {note_type} -d "{data}" -h {host_label}')
 

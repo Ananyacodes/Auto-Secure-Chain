@@ -10,12 +10,18 @@ import json
 import math
 import re
 import hashlib
+import logging
 from pathlib import Path
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent
 REPORTS = ROOT.parent / "reports"
 RULES_PATH = ROOT / "rules.yar"
-PUBKEY_PATH = ROOT / "public_key.pem"
+# Public key: prefer AUTOS_PUBLIC_KEY env var, otherwise fall back to committed fixture `public_key.pem`
+PUBKEY_PATH = Path(os.environ.get("AUTOS_PUBLIC_KEY") or (ROOT / "public_key.pem"))
 
 REPORTS.mkdir(parents=True, exist_ok=True)
 
@@ -48,7 +54,6 @@ def hash_file(path: Path, algo="sha256"):
     return h.hexdigest()
 
 def verify_external_signature(fw_path: Path):
-    # Looks for fw.bin.sig alongside fw_path and a public key at PUBKEY_PATH
     sig_path = fw_path.with_suffix(fw_path.suffix + ".sig")
     if not sig_path.exists() or not PUBKEY_PATH.exists():
         return {"sig_found": sig_path.exists(), "pubkey_found": PUBKEY_PATH.exists(), "valid": None, "error": None}
@@ -57,13 +62,13 @@ def verify_external_signature(fw_path: Path):
         from cryptography.hazmat.primitives.asymmetric import padding
         from cryptography.hazmat.backends import default_backend
     except Exception as e:
-        return {"sig_found": True, "pubkey_found": True, "valid": None, "error": "cryptography not installed: " + str(e)}
+        logger.error(f"Cryptography library not available: {e}")
+        return {"sig_found": True, "pubkey_found": True, "valid": None, "error": f"cryptography not installed: {e}"}
     try:
         data = fw_path.read_bytes()
         sig = sig_path.read_bytes()
         pubpem = PUBKEY_PATH.read_bytes()
         pub = serialization.load_pem_public_key(pubpem, backend=default_backend())
-        # Try PKCS#1 v1.5 verify with SHA256 (common simple scheme). If different scheme is used, verification will fail.
         pub.verify(
             sig,
             data,
@@ -72,6 +77,7 @@ def verify_external_signature(fw_path: Path):
         )
         return {"sig_found": True, "pubkey_found": True, "valid": True, "error": None}
     except Exception as e:
+        logger.warning(f"Signature verification failed for {fw_path}: {e}")
         return {"sig_found": True, "pubkey_found": True, "valid": False, "error": str(e)}
 
 def load_rules():
@@ -87,7 +93,12 @@ def load_rules():
         return None
 
 def scan_file(path: Path, rules):
-    data = path.read_bytes()
+    try:
+        data = path.read_bytes()
+    except Exception as e:
+        logger.error(f"Failed to read file {path}: {e}")
+        return {"file": str(path.name), "error": f"Failed to read file: {e}"}
+
     result = {
         "file": str(path.name),
         "size_bytes": path.stat().st_size,
@@ -119,8 +130,9 @@ def scan_file(path: Path, rules):
                     "tags": m.tags,
                     "strings": [{"offset": s[0], "id": s[1], "data_preview": s[2].decode('latin1', errors='replace')[:200]} for s in m.strings]
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"YARA matching failed for {path}: {e}")
+            result["yara_error"] = str(e)
 
     # quick severity heuristic
     sev = 0
@@ -153,34 +165,80 @@ def scan_file(path: Path, rules):
     return result
 
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="AutoSecureChain firmware scanner")
+    parser.add_argument("-i", "--input", help="Path to firmware file or directory to scan. If omitted scans scanner/ for .bin/.img/.fw files.")
+    parser.add_argument("-o", "--outdir", help="Reports output directory (default: AutoSecureChain/reports)", default=None)
+    args = parser.parse_args()
+
+    # allow overriding reports dir
+    global REPORTS
+    if args.outdir:
+        REPORTS = Path(args.outdir)
+    REPORTS.mkdir(parents=True, exist_ok=True)
+
     rules = load_rules()
-    firmware_files = sorted([p for p in ROOT.iterdir() if p.suffix.lower() in (".bin", ".img", ".fw")])
+
+    # If no public key fixture is present, attempt to generate a test keypair
+    if not PUBKEY_PATH.exists():
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("create_test_keys", str(ROOT / "create_test_keys.py"))
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            print(f"Generated test public key fixture at {PUBKEY_PATH}")
+        except Exception:
+            # ignore generation failure; verification will simply be skipped or marked missing
+            pass
+
+    # determine firmware files to scan
+    if args.input:
+        p = Path(args.input)
+        if p.is_dir():
+            firmware_files = sorted([f for f in p.rglob("*") if f.suffix.lower() in (".bin", ".img", ".fw")])
+        elif p.is_file():
+            firmware_files = [p]
+        else:
+            print(f"Input path not found: {args.input}")
+            return
+    else:
+        firmware_files = sorted([p for p in ROOT.iterdir() if p.suffix.lower() in (".bin", ".img", ".fw")])
+
     if not firmware_files:
-        print("No firmware files found in scanner/ (looking for .bin, .img, .fw).")
+        logger.info("No firmware files found to scan (looked in scanner/ or provided input).")
         return
 
-    full_report = {"scanned_at": __import__("datetime").datetime.utcnow().isoformat() + "Z", "files": []}
+    full_report = {"scanned_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(), "files": []}
     for f in firmware_files:
         try:
             r = scan_file(f, rules)
             full_report["files"].append(r)
-            print(f"Scanned {f.name}  severity={r['severity_score']}")
+            logger.info(f"Scanned {f.name}  severity={r.get('severity_score', 'N/A')}")
         except Exception as e:
+            logger.error(f"Failed to scan {f}: {e}")
             full_report["files"].append({"file": str(f.name), "error": str(e)})
 
     report_path = REPORTS / "report.json"
-    with open(report_path, "w", encoding="utf-8") as fh:
-        json.dump(full_report, fh, indent=2)
+    try:
+        with open(report_path, "w", encoding="utf-8") as fh:
+            json.dump(full_report, fh, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to write report to {report_path}: {e}")
+        sys.exit(1)
 
     mitigation_path = REPORTS / "mitigation_actions.json"
     actions = {"generated_at": full_report["scanned_at"], "actions": []}
     for f in full_report["files"]:
         for m in f.get("recommended_mitigations", []):
             actions["actions"].append({"file": f["file"], **m})
-    with open(mitigation_path, "w", encoding="utf-8") as fh:
-        json.dump(actions, fh, indent=2)
+    try:
+        with open(mitigation_path, "w", encoding="utf-8") as fh:
+            json.dump(actions, fh, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to write mitigations to {mitigation_path}: {e}")
 
-    print("Reports written to:", report_path, "and", mitigation_path)
+    logger.info(f"Reports written to: {report_path} and {mitigation_path}")
 
 if __name__ == "__main__":
     main()

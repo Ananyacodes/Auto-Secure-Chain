@@ -64,11 +64,85 @@ cd Auto-Secure-Chain
 # Activate virtual environment
 .\venv\Scripts\Activate.ps1
 
-# Run scanner directly
+# Run scanner directly against scanner/ samples
 python AutoSecureChain\scanner\scanner.py
+
+# Or scan a custom directory without copying files
+python AutoSecureChain\scanner\scanner.py -i C:\path\to\firmware
+
+# Optionally override output directory
+python AutoSecureChain\scanner\scanner.py -i C:\path\to\firmware -o C:\path\to\output
 
 # View report
 Get-Content -Raw AutoSecureChain\reports\report.json | ConvertFrom-Json | ConvertTo-Json -Depth 10
+```
+
+### Scanner CLI Options
+```
+usage: scanner.py [-h] [-i INPUT] [-o OUTDIR]
+
+  -i INPUT, --input INPUT       Path to firmware file or directory to scan.
+                                If omitted, scans scanner/ for .bin/.img/.fw files.
+  -o OUTDIR, --outdir OUTDIR    Reports output directory (default: AutoSecureChain/reports)
+```
+
+---
+
+##  End-to-End Integration: Scanner → Backend → UI
+
+The complete workflow connects the firmware scanner, Flask backend API, and web UI dashboard:
+
+### 1. Run the Scanner
+```powershell
+# Activate venv and run scanner
+.\venv\Scripts\Activate.ps1
+python AutoSecureChain\scanner\scanner.py -i C:\path\to\firmware
+# Output: AutoSecureChain\reports\report.json
+```
+
+### 2. Start the Flask Backend API
+```powershell
+# From the repo root (with venv active)
+python AutoSecureChain\ui\app.py
+# Flask server runs on http://localhost:5000
+# API endpoint: http://localhost:5000/api/report (JSON)
+# UI dashboard: http://localhost:5000/
+```
+
+### 3. View Results in Dashboard
+- **Flask UI**: Open http://localhost:5000/ in your browser to view reports in HTML format
+- **Frontend SPA** (React): Alternatively, run React frontend (requires Node.js):
+  ```powershell
+  cd frontend
+  npm install
+  npm start
+  # Opens http://localhost:3000
+  # Frontend fetches from Flask API at http://localhost:5000/api/report
+  ```
+
+### Integration Flow
+```
+[Firmware Files] 
+    ↓
+[scanner.py] → AutoSecureChain/reports/report.json
+    ↓
+[Flask Backend] (/api/report, /index.html)
+    ↓
+[React Frontend] (fetches via CORS)
+    ↓
+[Dashboard UI]
+```
+
+### Provenance & Blockchain
+On-chain records are stored via `AutoSecure.sol`:
+```powershell
+# Deploy contract (requires Node.js/Hardhat)
+npm install
+npx hardhat run scripts/deploy.ts
+
+# Submit firmware hash to blockchain
+# Contract stores: hash, submitter, timestamp, approval status
+# Enables audit trail and supply-chain verification
 ```
 
 ---
@@ -121,19 +195,54 @@ Move-Item public_key.pem "$env:USERPROFILE\.autosecurechain\"
 ```
 
 ### CI/CD Integration
+
+This project includes comprehensive GitHub Actions workflows for automated testing and quality assurance:
+
+#### Automated Testing
+- **Python CI**: Runs pytest, flake8 linting, and mypy type checking on scanner code
+- **Node.js CI**: Runs Hardhat contract tests and frontend TypeScript/ESLint checks
+- **Code Quality**: Validates JSON files, checks for large files, and performs security scans
+- **Coverage**: Uploads test coverage reports to Codecov
+
+#### Workflow Triggers
+- Runs on pushes and pull requests to `main`/`master` branches
+- Path-based filtering ensures only relevant workflows run for specific changes
+- Supports multiple Python versions (3.8-3.12) for compatibility testing
+
+#### Example: Add to Your CI Pipeline
 ```yaml
-# .github/workflows/firmware-scan.yml
-- name: Run security scan
+# In your .github/workflows/deploy.yml
+- name: Security scan firmware
   run: |
-    python -m venv venv
-    .\venv\Scripts\Activate.ps1
-    pip install -r requirements.txt
-    python AutoSecureChain\scanner\scanner.py
-    
-- name: Fail on critical findings
-  run: |
-    $report = Get-Content AutoSecureChain\reports\report.json | ConvertFrom-Json
-    if ($report.files.severity_score -gt 5) { exit 1 }
+    python AutoSecureChain/scanner/scanner.py -i ./firmware
+    # Fail build if critical vulnerabilities found
+    python -c "
+    import json
+    report = json.load(open('AutoSecureChain/reports/report.json'))
+    critical = [f for f in report['files'] if f['severity_score'] >= 7]
+    if critical:
+        print(f'Found {len(critical)} critical vulnerabilities')
+        exit(1)
+    "
+```
+
+#### Local Quality Checks
+```bash
+# Run Python tests and linting
+pip install pytest flake8 mypy
+pytest test/ -v
+flake8 AutoSecureChain/scanner/
+mypy AutoSecureChain/scanner/scanner.py
+
+# Run contract tests
+npm install
+npx hardhat test
+
+# Run frontend tests
+cd frontend
+npm install
+npm test
+npm run build
 ```
 
 ---
@@ -142,16 +251,33 @@ Move-Item public_key.pem "$env:USERPROFILE\.autosecurechain\"
 
 ```
 AutoSecureChain/
- scanner/
-    scanner.py              # Core analysis engine
-    rules.yar               # YARA detection rules
-    create_test_keys.py     # Test key generator
- reports/                    # Generated reports (gitignored)
- firmware/                   # User firmware files (gitignored)
- run-scanner.ps1             # Main execution script
- setup.ps1                   # Initial setup script
- requirements.txt            # Dependencies
- README.md
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml              # Combined CI workflow
+│   │   ├── python-ci.yml       # Python testing pipeline
+│   │   ├── nodejs-ci.yml       # Node.js testing pipeline
+│   │   └── code-quality.yml    # Code quality checks
+│   └── dependabot.yml          # Automated dependency updates
+├── scanner/
+│   ├── scanner.py              # Core analysis engine
+│   ├── rules.yar               # YARA detection rules
+│   └── create_test_keys.py     # Test key generator
+├── ui/
+│   └── app.py                  # Flask backend API
+├── reports/                    # Generated reports (gitignored)
+├── firmware/                   # User firmware files (gitignored)
+├── contracts/                  # Solidity smart contracts
+├── frontend/                   # React dashboard UI
+├── test/                       # Python unit tests
+├── scripts/                    # Metasploit integration
+├── .flake8                     # Python linting config
+├── mypy.ini                    # Python type checking config
+├── codecov.yml                 # Code coverage config
+├── audit-ci.json               # Dependency audit config
+├── run-scanner.ps1             # Main execution script
+├── setup.ps1                   # Initial setup script
+├── requirements.txt            # Python dependencies
+└── README.md
 ```
 
 ---
@@ -172,11 +298,32 @@ Edit `AutoSecureChain/scanner/rules.yar`:
 ```yara
 rule custom_backdoor
 {
+  meta:
+    description = "Detect custom backdoor pattern"
+    score = 5
   strings:
-    $pattern = "CUSTOM_BACKDOOR_SIGNATURE"
+    $pattern = /\bCUSTOM_BACKDOOR_SIGNATURE\b/i
   condition:
     $pattern
 }
+```
+
+**Rule Scoring**: Each rule has a `score` metadata field (1–8) used to compute severity. Higher scores indicate more critical issues. Rules use word-boundary regex (`\b`) to reduce false positives.
+
+### Signature Verification
+
+The scanner verifies firmware signatures using RSA PKCS#1 v1.5 + SHA256:
+
+```powershell
+# Generate test keypair (development only)
+python AutoSecureChain\scanner\create_test_keys.py
+# Creates: public_key.pem, test_private.pem, sample.bin.sig
+
+# Sign your own firmware
+openssl dgst -sha256 -sign private_key.pem -out firmware.bin.sig firmware.bin
+
+# Scanner automatically verifies firmware.bin.sig against public_key.pem
+python AutoSecureChain\scanner\scanner.py -i .\firmware
 ```
 
 ---

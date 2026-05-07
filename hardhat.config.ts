@@ -1,4 +1,6 @@
-import { task } from "hardhat/config";
+import "@nomiclabs/hardhat-ethers";
+import "@nomiclabs/hardhat-etherscan";
+import { task, HardhatUserConfig } from "hardhat/config";
 
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   const accounts = await hre.ethers.getSigners();
@@ -7,12 +9,17 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
-export default {
-  solidity: "0.8.0",
+const config: HardhatUserConfig = {
+  solidity: "0.8.20",
   networks: {
-    rinkeby: {
-      url: process.env.INFURA_URL,
-      accounts: [process.env.PRIVATE_KEY],
+    sepolia: {
+      url: process.env.INFURA_URL || "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY || "",
+  },
 };
+
+export default config;

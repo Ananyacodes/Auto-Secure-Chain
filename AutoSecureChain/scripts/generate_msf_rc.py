@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 import json
+import re
 from pathlib import Path
 
 """
@@ -19,6 +20,10 @@ OUT_RC = PROJECT_ROOT / "scripts" / "autosecurechain_notes.rc"
 
 def safe(s: str) -> str:
     return (s or "").replace('"', "'").replace("\n", " ").strip()
+
+
+def safe_token(s: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]", "_", (s or "").strip()) or "unknown"
 
 
 def main() -> int:
@@ -57,7 +62,7 @@ def main() -> int:
             "yara_matches": len(matches),
         }
         data = " ".join(f"{k}={safe(str(v))}" for k, v in summary.items())
-        note_type = f"autosecurechain.{fname}".replace(" ", "_")
+        note_type = f"autosecurechain.{safe_token(fname)}"
         lines.append(f'notes -a -t {note_type} -d "{data}" -h autosecurechain')
 
     OUT_RC.write_text("\n".join(lines) + "\n", encoding="utf-8")

@@ -41,24 +41,26 @@ Write-Host "Checking dependencies..." -ForegroundColor Green
 pip install -q --upgrade pip
 pip install -q -r requirements.txt
 
-# Copy firmware files to scanner directory
+# Run scanner against firmware directory (no copying required)
 if (Test-Path $FirmwareDir) {
     $firmwareFiles = Get-ChildItem -Path $FirmwareDir -Include *.bin,*.img,*.fw -Recurse
     if ($firmwareFiles) {
-        Write-Host "Found $($firmwareFiles.Count) firmware file(s)" -ForegroundColor Green
-        foreach ($file in $firmwareFiles) {
-            Copy-Item -Path $file.FullName -Destination "AutoSecureChain\scanner\" -Force
-        }
+        Write-Host "Found $($firmwareFiles.Count) firmware file(s) in $FirmwareDir" -ForegroundColor Green
     } else {
-        Write-Host "No firmware files found in $FirmwareDir" -ForegroundColor Yellow
-        Write-Host "Scanning default sample.bin..." -ForegroundColor Gray
+        Write-Host "No firmware files found in $FirmwareDir; scanner will look for samples in scanner/" -ForegroundColor Yellow
     }
+} else {
+    Write-Host "Firmware directory $FirmwareDir not found; scanner will look for samples in scanner/" -ForegroundColor Yellow
 }
 
 # Run scanner
 Write-Host ""
 Write-Host "Running security scan..." -ForegroundColor Cyan
-python AutoSecureChain\scanner\scanner.py
+if (Test-Path $FirmwareDir) {
+    python AutoSecureChain\scanner\scanner.py -i $FirmwareDir
+} else {
+    python AutoSecureChain\scanner\scanner.py
+}
 
 # Optional: export notes to Metasploit via .rc
 if ($ExportToMetasploit) {
