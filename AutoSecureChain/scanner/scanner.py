@@ -10,7 +10,13 @@ import json
 import math
 import re
 import hashlib
+import logging
+import time
 from pathlib import Path
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent
 REPORTS = ROOT.parent / "reports"
@@ -18,6 +24,15 @@ RULES_PATH = ROOT / "rules.yar"
 PUBKEY_PATH = ROOT / "public_key.pem"
 
 REPORTS.mkdir(parents=True, exist_ok=True)
+
+# Import audit logger
+try:
+    from .key_manager import AuditLogger
+    audit_logger = AuditLogger()
+except ImportError:
+    # Fallback if key_manager is not available
+    audit_logger = None
+    logger.warning("Audit logging not available - key_manager module not found")
 
 PRINTABLE_RE = re.compile(br'[\x20-\x7E]{4,}')  # printable ascii strings length >=4
 
@@ -51,13 +66,23 @@ def verify_external_signature(fw_path: Path):
     # Looks for fw.bin.sig alongside fw_path and a public key at PUBKEY_PATH
     sig_path = fw_path.with_suffix(fw_path.suffix + ".sig")
     if not sig_path.exists() or not PUBKEY_PATH.exists():
-        return {"sig_found": sig_path.exists(), "pubkey_found": PUBKEY_PATH.exists(), "valid": None, "error": None}
+        sig_info = {"sig_found": sig_path.exists(), "pubkey_found": PUBKEY_PATH.exists(), "valid": None, "error": None}
+        if audit_logger:
+            audit_logger.log_event("signature_check", "info", f"Signature verification skipped for {fw_path.name}",
+                                 {"reason": "missing_signature_or_key", "sig_found": sig_path.exists(), "pubkey_found": PUBKEY_PATH.exists()})
+        return sig_info
+
     try:
         from cryptography.hazmat.primitives import hashes, serialization
         from cryptography.hazmat.primitives.asymmetric import padding
         from cryptography.hazmat.backends import default_backend
     except Exception as e:
-        return {"sig_found": True, "pubkey_found": True, "valid": None, "error": "cryptography not installed: " + str(e)}
+        error_msg = "cryptography not installed: " + str(e)
+        sig_info = {"sig_found": True, "pubkey_found": True, "valid": None, "error": error_msg}
+        if audit_logger:
+            audit_logger.log_event("signature_check", "error", f"Signature verification failed for {fw_path.name}: {error_msg}")
+        return sig_info
+
     try:
         data = fw_path.read_bytes()
         sig = sig_path.read_bytes()
@@ -70,9 +95,15 @@ def verify_external_signature(fw_path: Path):
             padding.PKCS1v15(),
             hashes.SHA256()
         )
-        return {"sig_found": True, "pubkey_found": True, "valid": True, "error": None}
+        sig_info = {"sig_found": True, "pubkey_found": True, "valid": True, "error": None}
+        if audit_logger:
+            audit_logger.log_event("signature_check", "info", f"Signature verification successful for {fw_path.name}")
+        return sig_info
     except Exception as e:
-        return {"sig_found": True, "pubkey_found": True, "valid": False, "error": str(e)}
+        sig_info = {"sig_found": True, "pubkey_found": True, "valid": False, "error": str(e)}
+        if audit_logger:
+            audit_logger.log_event("signature_check", "warning", f"Signature verification failed for {fw_path.name}: {str(e)}")
+        return sig_info
 
 def load_rules():
     try:
@@ -153,20 +184,42 @@ def scan_file(path: Path, rules):
     return result
 
 def main():
+    if audit_logger:
+        audit_logger.log_scan_start("scanner directory", os.environ.get("USER", "unknown"))
+
+    start_time = time.time()
     rules = load_rules()
     firmware_files = sorted([p for p in ROOT.iterdir() if p.suffix.lower() in (".bin", ".img", ".fw")])
     if not firmware_files:
         print("No firmware files found in scanner/ (looking for .bin, .img, .fw).")
+        if audit_logger:
+            audit_logger.log_event("scan_aborted", "warning", "No firmware files found to scan")
         return
 
     full_report = {"scanned_at": __import__("datetime").datetime.utcnow().isoformat() + "Z", "files": []}
+    total_findings = 0
+
     for f in firmware_files:
         try:
             r = scan_file(f, rules)
             full_report["files"].append(r)
+            findings = len(r.get("yara_matches", [])) + len(r.get("suspicious_strings", []))
+            total_findings += findings
             print(f"Scanned {f.name}  severity={r['severity_score']}")
+
+            # Log individual file scan results
+            if audit_logger and findings > 0:
+                audit_logger.log_security_finding(str(f), "scan_findings", "warning" if r['severity_score'] > 5 else "info",
+                                                {"severity_score": r['severity_score'], "findings": findings})
+
         except Exception as e:
+            error_msg = f"Failed to scan {f.name}: {e}"
             full_report["files"].append({"file": str(f.name), "error": str(e)})
+            print(error_msg)
+            if audit_logger:
+                audit_logger.log_event("scan_error", "error", error_msg, {"file": str(f.name)})
+
+    duration = time.time() - start_time
 
     report_path = REPORTS / "report.json"
     with open(report_path, "w", encoding="utf-8") as fh:
@@ -181,6 +234,9 @@ def main():
         json.dump(actions, fh, indent=2)
 
     print("Reports written to:", report_path, "and", mitigation_path)
+
+    if audit_logger:
+        audit_logger.log_scan_complete("scanner directory", total_findings, duration)
 
 if __name__ == "__main__":
     main()

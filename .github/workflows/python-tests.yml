@@ -1,0 +1,63 @@
+name: Python Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'AutoSecureChain/scanner/**'
+      - 'requirements.txt'
+      - '.github/workflows/python-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'AutoSecureChain/scanner/**'
+      - 'requirements.txt'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install cryptography keyring
+    
+    - name: Run key manager tests
+      run: |
+        cd AutoSecureChain/scanner
+        python test_key_manager.py
+    
+    - name: Run scanner tests
+      run: |
+        cd AutoSecureChain/scanner
+        python test_scanner.py
+    
+    - name: Run E2E integration tests
+      run: |
+        cd AutoSecureChain/scanner
+        python test_e2e.py
+    
+    - name: Run API tests
+      run: |
+        python test_api.py
+    
+    - name: Lint with flake8 (warnings only)
+      continue-on-error: true
+      run: |
+        pip install flake8
+        # Stop on critical issues, warn on style
+        flake8 AutoSecureChain/scanner --count --select=E9,F63,F7,F82 --show-source --statistics || true
+        flake8 AutoSecureChain/scanner --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics

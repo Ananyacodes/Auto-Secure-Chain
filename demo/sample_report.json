@@ -1,0 +1,153 @@
+{
+  "scanned_at": "2024-01-15T10:30:45.123456Z",
+  "files": [
+    {
+      "file": "ecu_firmware_v2.1.3.bin",
+      "size_bytes": 524288,
+      "sha256": "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890",
+      "entropy": 7.234,
+      "strings_count": 1247,
+      "matches": [
+        {
+          "rule": "insecure_service_telnet",
+          "tags": ["network", "security"],
+          "strings": [
+            {
+              "offset": 12345,
+              "id": "$telnet",
+              "data_preview": "telnetd"
+            }
+          ]
+        },
+        {
+          "rule": "debug_and_jtag_indicators",
+          "tags": ["debug", "hardware"],
+          "strings": [
+            {
+              "offset": 67890,
+              "id": "$debug",
+              "data_preview": "DEBUG_MODE=1"
+            },
+            {
+              "offset": 67895,
+              "id": "$jtag",
+              "data_preview": "JTAG_ENABLE"
+            }
+          ]
+        }
+      ],
+      "suspicious_strings": [
+        "telnetd",
+        "DEBUG_MODE=1",
+        "JTAG_ENABLE",
+        "root:",
+        "password=admin123",
+        "FACTORY_RESET_KEY"
+      ],
+      "signature": {
+        "sig_found": true,
+        "pubkey_found": true,
+        "valid": true,
+        "error": null
+      },
+      "severity_score": 7,
+      "recommended_mitigations": [
+        {
+          "id": "require_fw_signing",
+          "title": "Enforce signed firmware with verified public keys",
+          "description": "Ensure each device verifies firmware signatures with a vetted public key and rejects unsigned or invalid updates."
+        },
+        {
+          "id": "disable_telnet",
+          "title": "Disable telnet and cleartext services",
+          "description": "Remove telnet daemon and other cleartext network services from production firmware."
+        },
+        {
+          "id": "protect_debug",
+          "title": "Secure debug interfaces",
+          "description": "Disable JTAG and debug interfaces in production builds, or protect them with cryptographic authentication."
+        },
+        {
+          "id": "remove_hardcoded",
+          "title": "Remove hardcoded credentials",
+          "description": "Replace hardcoded passwords and factory keys with secure key derivation or provisioning mechanisms."
+        }
+      ]
+    },
+    {
+      "file": "bootloader_v1.0.2.bin",
+      "size_bytes": 131072,
+      "sha256": "b2c3d4e5f6789012345678901234567890123456789012345678901234567890a1",
+      "entropy": 6.891,
+      "strings_count": 423,
+      "matches": [
+        {
+          "rule": "hardcoded_credentials_or_tokens",
+          "tags": ["credentials", "security"],
+          "strings": [
+            {
+              "offset": 45678,
+              "id": "$token",
+              "data_preview": "PROVISION_TOKEN=DEMO-ABCDEFG-12345"
+            }
+          ]
+        }
+      ],
+      "suspicious_strings": [
+        "PROVISION_TOKEN=DEMO-ABCDEFG-12345",
+        "FACTORY_MODE",
+        "U-Boot"
+      ],
+      "signature": {
+        "sig_found": true,
+        "pubkey_found": true,
+        "valid": false,
+        "error": "Signature verification failed: Invalid signature"
+      },
+      "severity_score": 8,
+      "recommended_mitigations": [
+        {
+          "id": "require_fw_signing",
+          "title": "Enforce signed firmware with verified public keys",
+          "description": "Ensure each device verifies firmware signatures with a vetted public key and rejects unsigned or invalid updates."
+        },
+        {
+          "id": "secure_provisioning",
+          "title": "Implement secure provisioning",
+          "description": "Replace demo tokens with cryptographically secure, unique per-device provisioning credentials."
+        },
+        {
+          "id": "validate_signatures",
+          "title": "Validate all firmware signatures",
+          "description": "Ensure bootloader validates the signature of subsequent firmware images before loading."
+        }
+      ]
+    },
+    {
+      "file": "kernel_module.ko",
+      "size_bytes": 24576,
+      "sha256": "c3d4e5f6789012345678901234567890123456789012345678901234567890a1b2",
+      "entropy": 5.432,
+      "strings_count": 89,
+      "matches": [],
+      "suspicious_strings": [
+        "GPL",
+        "Linux"
+      ],
+      "signature": {
+        "sig_found": false,
+        "pubkey_found": true,
+        "valid": null,
+        "error": null
+      },
+      "severity_score": 2,
+      "recommended_mitigations": [
+        {
+          "id": "require_fw_signing",
+          "title": "Enforce signed firmware with verified public keys",
+          "description": "Ensure each device verifies firmware signatures with a vetted public key and rejects unsigned or invalid updates."
+        }
+      ]
+    }
+  ]
+}

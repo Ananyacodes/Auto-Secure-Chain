@@ -1,0 +1,10 @@
+{
+  "key_id": "23cff81800fc9f84",
+  "name": "test_hardened",
+  "algorithm": "RSA",
+  "key_size": 2048,
+  "created_at": "2026-05-09T01:11:44.378069+00:00",
+  "status": "active",
+  "usage_count": 0,
+  "last_used": null
+}

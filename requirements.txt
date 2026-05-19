@@ -1,10 +1,14 @@
 ﻿# Core dependencies
 cryptography>=41.0.0
 yara-python>=4.3.1
+keyring>=23.0.0
 
 # Optional: Web frontend
 flask>=3.0.0
 flask-cors>=4.0.0
+flask-limiter>=3.5.0
+PyJWT>=2.8.0
+filelock>=3.13.0
 
 # Development
 pytest>=7.4.0

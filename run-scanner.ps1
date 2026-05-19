@@ -18,13 +18,85 @@ param(
     [int]$MsfPort = 55553,
     [switch]$MsfSsl = $false,
     [string]$MsfUser = "msf",
-    [string]$MsfPass = ""
+    [string]$MsfPass = "",
+    [ValidateSet("scan", "generate", "sign", "verify", "rotate", "list", "info", "audit")]
+    [string]$KeyCommand = "scan",
+    [string]$KeyName = "production",
+    [int]$KeySize = 4096,
+    [string]$FirmwarePath = "",
+    [string]$OldKeyName = "",
+    [string]$NewKeyName = "",
+    [string]$AuditType = "",
+    [ValidateSet("info", "warning", "error")]
+    [string]$AuditSeverity = "",
+    [int]$AuditLimit = 20,
+    [switch]$Json
 )
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "AutoSecureChain - ECU Firmware Scanner" -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor Cyan
+
+function Invoke-KeyManager {
+    param(
+        [string]$Command,
+        [string[]]$ExtraArgs
+    )
+
+    $keyManagerScript = Join-Path $PSScriptRoot "key-manager.ps1"
+    if (-not (Test-Path $keyManagerScript)) {
+        throw "Key manager script not found: $keyManagerScript"
+    }
+
+    & $keyManagerScript -Command $Command @ExtraArgs
+}
+
+function Invoke-KeyManagementMode {
+    Write-Host "Running key management command: $KeyCommand" -ForegroundColor Cyan
+
+    switch ($KeyCommand) {
+        "generate" {
+            Invoke-KeyManager -Command $KeyCommand -ExtraArgs @("-Name", $KeyName, "-KeySize", $KeySize.ToString())
+        }
+        "sign" {
+            if (-not $FirmwarePath) { throw "-FirmwarePath is required for sign" }
+            Invoke-KeyManager -Command $KeyCommand -ExtraArgs @("-Firmware", $FirmwarePath, "-Key", $KeyName)
+        }
+        "verify" {
+            if (-not $FirmwarePath) { throw "-FirmwarePath is required for verify" }
+            Invoke-KeyManager -Command $KeyCommand -ExtraArgs @("-Firmware", $FirmwarePath, "-Key", $KeyName)
+        }
+        "rotate" {
+            if (-not $OldKeyName) { throw "-OldKeyName is required for rotate" }
+            $extraArgs = @("-OldKey", $OldKeyName)
+            if ($NewKeyName) { $extraArgs += @("-NewKey", $NewKeyName) }
+            Invoke-KeyManager -Command $KeyCommand -ExtraArgs $extraArgs
+        }
+        "list" {
+            $extraArgs = @()
+            if ($Json) { $extraArgs += "-Json" }
+            Invoke-KeyManager -Command $KeyCommand -ExtraArgs $extraArgs
+        }
+        "info" {
+            $extraArgs = @("-Name", $KeyName)
+            if ($Json) { $extraArgs += "-Json" }
+            Invoke-KeyManager -Command $KeyCommand -ExtraArgs $extraArgs
+        }
+        "audit" {
+            $extraArgs = @("-Limit", $AuditLimit.ToString())
+            if ($AuditType) { $extraArgs += @("-Type", $AuditType) }
+            if ($AuditSeverity) { $extraArgs += @("-Severity", $AuditSeverity) }
+            if ($Json) { $extraArgs += "-Json" }
+            Invoke-KeyManager -Command $KeyCommand -ExtraArgs $extraArgs
+        }
+    }
+}
+
+if ($KeyCommand -ne "scan") {
+    Invoke-KeyManagementMode
+    return
+}
 
 # Activate venv
 if (Test-Path "venv\Scripts\Activate.ps1") {
@@ -138,3 +210,6 @@ if (Test-Path "AutoSecureChain\reports\report.json") {
 } else {
     Write-Host "No report generated" -ForegroundColor Red
 }
+
+Write-Host ""
+Write-Host "Key management commands are available via -KeyCommand generate|sign|verify|rotate|list|info|audit" -ForegroundColor Cyan

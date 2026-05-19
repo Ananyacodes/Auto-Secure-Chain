@@ -1,0 +1,10 @@
+{
+  "key_id": "5b00d97b29e0095b",
+  "name": "test_api_key",
+  "algorithm": "RSA",
+  "key_size": 2048,
+  "created_at": "2026-05-09T01:08:49.689230+00:00",
+  "status": "active",
+  "usage_count": 0,
+  "last_used": null
+}
