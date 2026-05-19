@@ -1,0 +1,53 @@
+{
+  "generated_at": "2024-01-15T10:30:45.123456Z",
+  "actions": [
+    {
+      "file": "ecu_firmware_v2.1.3.bin",
+      "id": "require_fw_signing",
+      "title": "Enforce signed firmware with verified public keys",
+      "description": "Ensure each device verifies firmware signatures with a vetted public key and rejects unsigned or invalid updates."
+    },
+    {
+      "file": "ecu_firmware_v2.1.3.bin",
+      "id": "disable_telnet",
+      "title": "Disable telnet and cleartext services",
+      "description": "Remove telnet daemon and other cleartext network services from production firmware."
+    },
+    {
+      "file": "ecu_firmware_v2.1.3.bin",
+      "id": "protect_debug",
+      "title": "Secure debug interfaces",
+      "description": "Disable JTAG and debug interfaces in production builds, or protect them with cryptographic authentication."
+    },
+    {
+      "file": "ecu_firmware_v2.1.3.bin",
+      "id": "remove_hardcoded",
+      "title": "Remove hardcoded credentials",
+      "description": "Replace hardcoded passwords and factory keys with secure key derivation or provisioning mechanisms."
+    },
+    {
+      "file": "bootloader_v1.0.2.bin",
+      "id": "require_fw_signing",
+      "title": "Enforce signed firmware with verified public keys",
+      "description": "Ensure each device verifies firmware signatures with a vetted public key and rejects unsigned or invalid updates."
+    },
+    {
+      "file": "bootloader_v1.0.2.bin",
+      "id": "secure_provisioning",
+      "title": "Implement secure provisioning",
+      "description": "Replace demo tokens with cryptographically secure, unique per-device provisioning credentials."
+    },
+    {
+      "file": "bootloader_v1.0.2.bin",
+      "id": "validate_signatures",
+      "title": "Validate all firmware signatures",
+      "description": "Ensure bootloader validates the signature of subsequent firmware images before loading."
+    },
+    {
+      "file": "kernel_module.ko",
+      "id": "require_fw_signing",
+      "title": "Enforce signed firmware with verified public keys",
+      "description": "Ensure each device verifies firmware signatures with a vetted public key and rejects unsigned or invalid updates."
+    }
+  ]
+}

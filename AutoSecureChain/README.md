@@ -35,9 +35,16 @@ Usage (PowerShell)
 3. Run scanner:
    python AutoSecureChain\scanner\scanner.py
 
+4. Manage keys through the main entrypoint:
+  .\run-scanner.ps1 -KeyCommand list
+  .\run-scanner.ps1 -KeyCommand generate -KeyName production -KeySize 4096
+  .\run-scanner.ps1 -KeyCommand sign -FirmwarePath "C:\path\to\firmware.bin" -KeyName production
+
 Optional: signature verification
 - Set AUTOS_PUBLIC_KEY to the PEM public key path (recommended), or place public_key.pem in a secure folder.
 - Never commit private keys.
+- Use .\setup.ps1 to initialize the secure key directory and environment variable.
+- Use .\run-scanner.ps1 -KeyCommand generate|sign|verify|rotate|list|info|audit for key operations.
 
 Optional: Metasploit integration (defensive only)
 - Generate resource script and add notes:
