@@ -38,7 +38,7 @@ contract AutoSecure is IAutoSecure {
 
     function getScan(bytes32 firmwareHash) external view returns (ScanView memory) {
         Scan storage scan = scans[firmwareHash];
-        require(scan.exists, "Scan does not exist");
+        require(scan.exists, "No scan found for firmware hash");
         return ScanView({
             severity: scan.severity,
             metadataURI: scan.metadataURI,
