@@ -49,5 +49,18 @@ describe("AutoSecure Contract", function () {
         await expect(
             autoSecure.recordScan(ethers.utils.id("firmware-invalid-severity"), 11, "ipfs://invalid-severity"),
         ).to.be.revertedWith("Severity out of range");
+
+        await expect(
+            autoSecure.recordScan(ethers.utils.id("firmware-invalid-metadata"), 3, ""),
+        ).to.be.revertedWith("Metadata URI is required");
+    });
+
+    it("should accept severity at the maximum boundary", async function () {
+        const firmwareHash = ethers.utils.id("firmware-max-severity");
+
+        await autoSecure.recordScan(firmwareHash, 10, "ipfs://max-severity");
+        const scan = await autoSecure.getScan(firmwareHash);
+
+        expect(scan.severity).to.equal(10);
     });
 });

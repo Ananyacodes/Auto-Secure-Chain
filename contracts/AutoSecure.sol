@@ -19,6 +19,7 @@ contract AutoSecure is IAutoSecure {
     function recordScan(bytes32 firmwareHash, uint8 severity, string calldata metadataURI) external {
         require(firmwareHash != bytes32(0), "Invalid firmware hash");
         require(severity <= MAX_SEVERITY, "Severity out of range");
+        require(bytes(metadataURI).length > 0, "Metadata URI is required");
         require(!scans[firmwareHash].exists, "Scan already recorded");
 
         scans[firmwareHash] = Scan({
