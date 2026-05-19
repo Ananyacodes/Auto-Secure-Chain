@@ -4,15 +4,6 @@ import { ethers } from "hardhat";
 describe("AutoSecure Contract", function () {
     let autoSecure: any;
 
-    async function expectRevert(promise: Promise<any>, message: string) {
-        try {
-            await promise;
-            expect.fail("Expected transaction to revert");
-        } catch (error: any) {
-            expect(error.message).to.include(message);
-        }
-    }
-
     beforeEach(async function () {
         const AutoSecure = await ethers.getContractFactory("AutoSecure");
         autoSecure = await AutoSecure.deploy();
@@ -45,21 +36,18 @@ describe("AutoSecure Contract", function () {
         const firmwareHash = ethers.utils.id("firmware-duplicate");
         await autoSecure.recordScan(firmwareHash, 2, "ipfs://first");
 
-        await expectRevert(
+        await expect(
             autoSecure.recordScan(firmwareHash, 3, "ipfs://second"),
-            "Scan already recorded"
-        );
+        ).to.be.revertedWith("Scan already recorded");
     });
 
     it("should reject invalid scan parameters", async function () {
-        await expectRevert(
+        await expect(
             autoSecure.recordScan(ethers.constants.HashZero, 1, "ipfs://invalid-hash"),
-            "Invalid firmware hash"
-        );
+        ).to.be.revertedWith("Invalid firmware hash");
 
-        await expectRevert(
+        await expect(
             autoSecure.recordScan(ethers.utils.id("firmware-invalid-severity"), 11, "ipfs://invalid-severity"),
-            "Severity out of range"
-        );
+        ).to.be.revertedWith("Severity out of range");
     });
 });
