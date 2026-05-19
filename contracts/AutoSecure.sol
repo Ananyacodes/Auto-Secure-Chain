@@ -9,6 +9,7 @@ contract AutoSecure is IAutoSecure {
         string metadataURI;
         address reporter;
         uint256 scannedAt;
+        bool exists;
     }
 
     mapping(bytes32 => Scan) private scans;
@@ -18,20 +19,21 @@ contract AutoSecure is IAutoSecure {
     function recordScan(bytes32 firmwareHash, uint8 severity, string calldata metadataURI) external {
         require(firmwareHash != bytes32(0), "Invalid firmware hash");
         require(severity <= MAX_SEVERITY, "Severity out of range");
-        require(scans[firmwareHash].scannedAt == 0, "Scan already recorded");
+        require(!scans[firmwareHash].exists, "Scan already recorded");
 
         scans[firmwareHash] = Scan({
             severity: severity,
             metadataURI: metadataURI,
             reporter: msg.sender,
-            scannedAt: block.timestamp
+            scannedAt: block.timestamp,
+            exists: true
         });
 
         emit ScanRecorded(firmwareHash, severity, metadataURI, msg.sender, block.timestamp);
     }
 
     function hasScan(bytes32 firmwareHash) external view returns (bool) {
-        return scans[firmwareHash].scannedAt != 0;
+        return scans[firmwareHash].exists;
     }
 
     function getScan(bytes32 firmwareHash)
@@ -40,7 +42,7 @@ contract AutoSecure is IAutoSecure {
         returns (uint8 severity, string memory metadataURI, address reporter, uint256 scannedAt)
     {
         Scan storage scan = scans[firmwareHash];
-        require(scan.scannedAt != 0, "Scan does not exist");
+        require(scan.exists, "Scan does not exist");
         return (scan.severity, scan.metadataURI, scan.reporter, scan.scannedAt);
     }
 }
