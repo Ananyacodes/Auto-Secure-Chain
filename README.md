@@ -25,6 +25,18 @@ https://github.com/user-attachments/assets/d8ef7e3c-9599-4203-93e1-009d758d0c54
 
 ---
 
+## What Parts Are Left?
+
+The firmware scanner pipeline is implemented, but these project areas are still incomplete:
+
+- **Smart contract implementation** (`contracts/AutoSecure.sol`) currently contains placeholder logic.
+- **Blockchain integration service** (`src/services/chain.ts`) is intentionally blank.
+- **Application entrypoint** (`src/index.ts`) is intentionally blank.
+- **Automated contract testing setup** needs completion (`package.json` test script is a placeholder and current Hardhat test flow requires missing network env vars).
+- **Frontend experience** (`frontend/src/App.tsx`) is still a basic starter screen.
+
+---
+
 ##  Quick Start
 
 ### Prerequisites
