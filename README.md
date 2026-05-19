@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/d8ef7e3c-9599-4203-93e1-009d758d0c54
 
 The firmware scanner pipeline is implemented, and these project areas are still incomplete:
 
-- **Smart contract foundation** (`contracts/AutoSecure.sol`) now records immutable firmware scan metadata on-chain; future work can expand role controls and richer record indexing.
+- **Smart contract foundation** (`contracts/AutoSecure.sol`) now records immutable firmware scan metadata on-chain with authorized reporter controls; future work can expand richer record indexing.
 - **Blockchain integration service** (`src/services/chain.ts`) is intentionally blank.
 - **Application entrypoint** (`src/index.ts`) is intentionally blank.
 - **Automated contract testing setup** needs completion (`package.json` test script is a placeholder and current Hardhat test flow requires missing network env vars).

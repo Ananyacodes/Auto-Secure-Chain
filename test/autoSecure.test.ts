@@ -32,6 +32,21 @@ describe("AutoSecure Contract", function () {
         expect(scan.scannedAt).to.be.gt(0);
     });
 
+    it("should only allow authorized reporters to submit scans", async function () {
+        const [, unauthorizedReporter] = await ethers.getSigners();
+        const firmwareHash = ethers.utils.id("unauthorized-firmware");
+
+        await expect(
+            autoSecure.connect(unauthorizedReporter).recordScan(firmwareHash, 3, "ipfs://unauthorized"),
+        ).to.be.revertedWith("Reporter is not authorized");
+
+        await autoSecure.setReporterAuthorization(unauthorizedReporter.address, true);
+        await autoSecure.connect(unauthorizedReporter).recordScan(firmwareHash, 3, "ipfs://authorized");
+
+        const scan = await autoSecure.getScan(firmwareHash);
+        expect(scan.reporter).to.equal(unauthorizedReporter.address);
+    });
+
     it("should reject duplicate scan submissions", async function () {
         const firmwareHash = ethers.utils.id("firmware-duplicate");
         await autoSecure.recordScan(firmwareHash, 2, "ipfs://first");
@@ -62,5 +77,13 @@ describe("AutoSecure Contract", function () {
         const scan = await autoSecure.getScan(firmwareHash);
 
         expect(scan.severity).to.equal(10);
+    });
+
+    it("should restrict reporter authorization management to owner", async function () {
+        const [, reporter] = await ethers.getSigners();
+
+        await expect(
+            autoSecure.connect(reporter).setReporterAuthorization(reporter.address, true),
+        ).to.be.revertedWith("Only owner can manage reporters");
     });
 });
